@@ -19,4 +19,7 @@ export const en: Record<string, string> = {
   "indicator.link_down": "Network down",
   "indicator.charging": "Charging",
   "indicator.unavailable": "Plugin offline",
+  "editor.entity": "Entity prefix (device slug)",
+  "editor.name": "Name",
+  "editor.language": "Language",
 };

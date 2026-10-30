@@ -2,5 +2,5 @@
   "name": "PS Vita Card",
   "render_readme": true,
   "filename": "ps-vita-card.js",
-  "homeassistant": "2024.1.0"
+  "homeassistant": "2024.11.0"
 }
