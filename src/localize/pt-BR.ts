@@ -19,4 +19,7 @@ export const ptBR: Record<string, string> = {
   "indicator.link_down": "Sem rede",
   "indicator.charging": "Carregando",
   "indicator.unavailable": "Plugin offline",
+  "editor.entity": "Prefixo das entidades (slug do dispositivo)",
+  "editor.name": "Nome",
+  "editor.language": "Idioma",
 };

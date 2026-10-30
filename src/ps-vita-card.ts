@@ -1,19 +1,19 @@
-import { LitElement, html, type TemplateResult } from "lit";
+import { LitElement, html, type PropertyValues, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { CARD_NAME, CARD_VERSION } from "./const";
 import { cardStyles } from "./styles";
 import { vitaDevice } from "./assets/vita-device";
-import { resolveEntities } from "./helpers/resolve-entities";
+import { resolveEntities, suggestPrefix } from "./helpers/resolve-entities";
 import { computeStateLine } from "./helpers/compute-state-line";
 import { formatStat } from "./helpers/format-stat";
 import { localize } from "./localize";
 import type {
   HassObject,
+  HassState,
   PSVitaCardConfig,
   ResolvedEntities,
   StatConfig,
 } from "./types";
-import "./editor";
 
 console.info(
   `%c PS-VITA-CARD %c v${CARD_VERSION} `,
@@ -22,7 +22,7 @@ console.info(
 );
 
 interface CustomCardWindow extends Window {
-  customCards?: Array<{ type: string; name: string; description: string; preview: boolean }>;
+  customCards?: Array<Record<string, unknown>>;
 }
 const w = window as CustomCardWindow;
 w.customCards = w.customCards || [];
@@ -31,6 +31,12 @@ w.customCards.push({
   name: "PS Vita Card",
   description: "Card for jailbroken PS Vita via ps-vita-mqtt-plugin MQTT integration",
   preview: false,
+  documentationURL: "https://github.com/hudsonbrendon/ps-vita-card",
+  // Offer this card when the user picks the device's MQTT battery sensor.
+  getEntitySuggestion: (hass: HassObject, entityId: string) => {
+    const prefix = suggestPrefix(hass, entityId);
+    return prefix ? { config: { type: `custom:${CARD_NAME}`, entity: prefix } } : null;
+  },
 });
 
 const DEFAULT_STATS: StatConfig[] = [
@@ -54,8 +60,39 @@ export class PSVitaCard extends LitElement {
     this._entities = resolveEntities(config);
   }
 
-  static getConfigElement(): HTMLElement {
-    return document.createElement(`${CARD_NAME}-editor`);
+  static getConfigForm() {
+    return {
+      schema: [
+        { name: "entity", required: true, selector: { text: {} } },
+        { name: "name", selector: { text: {} } },
+        { name: "language", selector: { select: { options: ["en", "pt-BR"], mode: "dropdown" } } },
+      ],
+      computeLabel: (schema: { name: string }) => localize(`editor.${schema.name}`),
+    };
+  }
+
+  getGridOptions() {
+    return { columns: 6, rows: 4, min_columns: 4, min_rows: 3 };
+  }
+
+  protected willUpdate(changed: PropertyValues): void {
+    if (changed.has("hass")) {
+      this.toggleAttribute("dark-mode", Boolean(this.hass?.themes?.darkMode));
+    }
+  }
+
+  // Plain stats (no unit/multiply/precision/suffix) use HA's locale-aware
+  // formatting when available; everything else keeps the card's formatStat.
+  private _displayStat(stateObj: HassState | undefined, s: StatConfig): string {
+    const plain = !s.unit && !s.multiply && s.precision === undefined && !s.suffix;
+    if (plain && stateObj && this.hass?.formatEntityState && !["unknown", "unavailable", ""].includes(stateObj.state)) {
+      try {
+        return this.hass.formatEntityState(stateObj);
+      } catch {
+        /* fall through */
+      }
+    }
+    return formatStat(stateObj, s);
   }
 
   static getStubConfig(): PSVitaCardConfig {
@@ -92,7 +129,7 @@ export class PSVitaCard extends LitElement {
       <div class="stats">
         ${stats.map(s => {
           const id = this.resolveStatEntityId(s);
-          const value = formatStat(this.hass!.states[id], s);
+          const value = this._displayStat(this.hass!.states[id], s);
           return html`
             <div class="stat">
               <div class="stat-value">${value}</div>
