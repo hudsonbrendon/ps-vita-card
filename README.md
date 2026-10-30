@@ -6,6 +6,10 @@
 
 # ps-vita-card
 
+<p align="center">
+  <img src="assets/preview.png" alt="PS Vita Card preview" width="420">
+</p>
+
 Home Assistant Lovelace card for a jailbroken PS Vita running
 [`ps-vita-mqtt-plugin`](https://github.com/hudsonbrendon/ps-vita-mqtt-plugin).
 
